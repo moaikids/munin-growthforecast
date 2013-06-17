@@ -1,0 +1,64 @@
+#!/usr/bin/python
+import os
+import sys
+import inspect
+import json
+import socket
+import urllib
+import urllib2
+import urlparse
+from optparse import OptionParser
+
+def get_metrics(url):
+    socket.setdefaulttimeout(10)
+    req = urllib2.Request(url, None, {})
+    data = json.load(urllib2.urlopen(req))
+    rows = data['rows']
+    rows.reverse()
+    for row in rows:
+        if row[0]:
+          return int(row[0])
+
+    return 0
+
+def munin(host, prefix, suffix, namespaces):
+    for namespace in namespaces:
+        metrics = get_metrics("http://" + host + "/xport/" + prefix + "/" + namespace + "/" + suffix)
+        print namespace + ".value " + str(metrics)
+
+def config(namespaces, warnings=[], criticals=[]):
+    print "graph_title growthforecast check_count"
+    print "graph_category growthforecast"
+    
+    for i, namespace in enumerate(namespaces):
+        print namespace + ".label " + namespace
+        print namespace + ".draw LINE1"
+        if warnings and warnings[i]:
+            print namespace + ".warning " + str(warnings[i]) 
+        if criticals and criticals[i]:
+            print namespace + ".critical " + str(criticals[i]) 
+
+if __name__ == "__main__":
+    if os.environ.get('host'):
+        host = os.environ.get('host')
+    else:
+        host = 'localhost:5125'
+
+    namespace_prefix = os.environ.get('namespace_prefix')
+    namespace_suffix = os.environ.get('namespace_suffix')
+    namespaces = os.environ.get('namespaces').split(',')
+    warnings = os.environ.get('warnings')
+    if warnings:
+        warnings = warnings.split(',')
+    else:
+        warnings = []
+    criticals = os.environ.get('criticals')
+    if criticals:
+        criticals = criticals.split(',')
+    else:
+        criticals = []
+
+    if len(sys.argv) > 1 and sys.argv[1] == "config":
+        config(namespaces, warnings, criticals)
+    else:
+        munin(host, namespace_prefix, namespace_suffix, namespaces)
