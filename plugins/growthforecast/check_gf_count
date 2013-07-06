@@ -26,8 +26,8 @@ def munin(host, prefix, suffix, namespaces):
         metrics = get_metrics("http://" + host + "/xport/" + prefix + "/" + namespace + "/" + suffix)
         print namespace + ".value " + str(metrics)
 
-def config(namespaces, warnings=[], criticals=[]):
-    print "graph_title growthforecast check_count"
+def config(file_name, namespaces, warnings=[], criticals=[]):
+    print "graph_title growthforecast " + file_name
     print "graph_category growthforecast"
     
     for i, namespace in enumerate(namespaces):
@@ -39,6 +39,7 @@ def config(namespaces, warnings=[], criticals=[]):
             print namespace + ".critical " + str(criticals[i]) 
 
 if __name__ == "__main__":
+    file_name = os.path.basename(__file__)
     if os.environ.get('host'):
         host = os.environ.get('host')
     else:
@@ -59,6 +60,6 @@ if __name__ == "__main__":
         criticals = []
 
     if len(sys.argv) > 1 and sys.argv[1] == "config":
-        config(namespaces, warnings, criticals)
+        config(file_name, namespaces, warnings, criticals)
     else:
         munin(host, namespace_prefix, namespace_suffix, namespaces)
