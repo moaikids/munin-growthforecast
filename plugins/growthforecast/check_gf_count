@@ -9,10 +9,18 @@ import urllib2
 import urlparse
 from optparse import OptionParser
 
-def get_metrics(url):
+def get_metrics(url, username=None, password=None):
     socket.setdefaulttimeout(10)
-    req = urllib2.Request(url, None, {})
-    data = json.load(urllib2.urlopen(req))
+    if username and password:
+        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        password_mgr.add_password(None, url, username, password)
+        handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+        opener = urllib2.build_opener(handler)
+        res = opener.open(url)
+    else:
+        req = urllib2.Request(url, None, {})
+        res = urllib2.urlopen(req)
+    data = json.load(res)
     rows = data['rows']
     rows.reverse()
     for row in rows:
@@ -21,9 +29,9 @@ def get_metrics(url):
 
     return 0
 
-def munin(host, prefix, suffix, namespaces):
+def munin(host, prefix, suffix, namespaces, username=None, password=None):
     for namespace in namespaces:
-        metrics = get_metrics("http://" + host + "/xport/" + prefix + "/" + namespace + "/" + suffix)
+        metrics = get_metrics("http://" + host + "/xport/" + prefix + "/" + namespace + "/" + suffix, username, password)
         print namespace + ".value " + str(metrics)
 
 def config(file_name, namespaces, warnings=[], criticals=[]):
@@ -44,6 +52,14 @@ if __name__ == "__main__":
         host = os.environ.get('host')
     else:
         host = 'localhost:5125'
+    if os.environ.get('username'):
+        username = os.environ.get('username')
+    else:
+        username = None
+    if os.environ.get('password'):
+        password = os.environ.get('password')
+    else:
+        password = None
 
     namespace_prefix = os.environ.get('namespace_prefix')
     namespace_suffix = os.environ.get('namespace_suffix')
@@ -62,4 +78,4 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "config":
         config(file_name, namespaces, warnings, criticals)
     else:
-        munin(host, namespace_prefix, namespace_suffix, namespaces)
+        munin(host, namespace_prefix, namespace_suffix, namespaces, username, password)
